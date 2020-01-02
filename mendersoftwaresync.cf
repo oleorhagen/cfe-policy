@@ -43,6 +43,7 @@ bundle agent mendersoftware {
 
                          # Misc (testing etc)
                          "mendertesting",
+                         "mender-convert",
       };
 
       # Path to mendersoftware repository
