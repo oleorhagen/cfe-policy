@@ -77,9 +77,14 @@ bundle agent mendersoftware {
       # Q1 . Q2 . Q3 . Q4::
       "/usr/bin/git fetch --all" # Update all remotes
         usebundle => git_fetch_all("$(location)$(repos)"),
+        classes => if_notkept("$(repos)_failed"),
         action => if_elapsed("$(fetch_every_x_minutes)");
 
   reports:
+
+    "$(repos)_failed"::
+      "Failed to fetch the remote: $(location)$(repos)";
+
       "github_repos: $(github_repos)";
     DEBUG::
       "handling directory: $(location)$(repos)";
@@ -94,6 +99,9 @@ bundle agent git_fetch_all(where)
       "/usr/bin/git"
         args => "fetch --all",
         contain => in_dir("$(where)");
+
+  reports:
+      "Fetching all in $(where)";
 
 }
 
