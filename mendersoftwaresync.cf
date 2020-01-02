@@ -40,6 +40,9 @@ bundle agent mendersoftware {
                         "deviceadm",
                         "deviceauth",
                          "mender-backend-cli",
+
+                         # Misc (testing etc)
+                         "mendertesting",
       };
 
       # Path to mendersoftware repository
