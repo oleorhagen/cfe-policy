@@ -4,7 +4,10 @@ body common control {
 
 body file control
 {
-        inputs => { "$(sys.libdir)/files.cf", "$(sys.libdir)/packages.cf" };
+        inputs => { "$(sys.libdir)/files.cf",
+                    "$(sys.libdir)/packages.cf",
+                    "$(sys.libdir)/commands.cf", # in_dir(dir)
+        };
 }
 
 # Clone all repositories from the mendersoftware organization at
@@ -81,12 +84,6 @@ bundle agent git_fetch_all(where)
         contain => in_dir("$(where)");
 
 }
-
-body contain in_dir(dir)
-{
-        chdir => "$(dir)";
-}
-
 
 bundle edit_line git_config_section_replace(sectionName, newSectionString)
 {
