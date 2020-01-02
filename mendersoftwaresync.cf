@@ -4,7 +4,8 @@ body common control {
 
 body file control
 {
-        inputs => { "$(sys.libdir)/files.cf",
+        inputs => { "$(sys.libdir)/common.cf", # if_elapsed
+                    "$(sys.libdir)/files.cf",
                     "$(sys.libdir)/packages.cf",
                     "$(sys.libdir)/commands.cf", # in_dir(dir)
                     "/home/olepor/misc/learn/cfe/spacemacs.cf", # Keep spacemacs up to date
@@ -43,12 +44,15 @@ bundle agent mendersoftware {
                         "deployments-enterprise",
                         "deviceadm",
                         "deviceauth",
-                         "mender-backend-cli",
+                        "mender-backend-cli",
 
                          # Misc (testing etc)
                          "mendertesting",
                          "mender-convert",
       };
+
+      # Fetch all remotes every 15 minutes
+      "fetch_every_x_minutes" string => "15";
 
       # Path to mendersoftware repository
       "location" string => "/home/olepor/mendersoftware/";
@@ -71,8 +75,18 @@ bundle agent mendersoftware {
         edit_line => git_config_section_replace("$(remotes)", "$(mendersoftware_section_template[$(remotes)][$(repos)])");
 
   methods:
+
+      # Only fetch the remotes every fifteen minutes
+      # Q1 . Q2 . Q3 . Q4::
       "/usr/bin/git fetch --all" # Update all remotes
-        usebundle => git_fetch_all("$(location)$(repos)");
+        usebundle => git_fetch_all("$(location)$(repos)"),
+        action => if_elapsed("$(fetch_every_x_minutes)");
+
+  reports:
+      "github_repos: $(github_repos)";
+    DEBUG::
+      "handling directory: $(location)$(repos)";
+      "handling remote: $(remotes)";
 
 }
 

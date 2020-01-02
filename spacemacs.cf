@@ -19,6 +19,10 @@ bundle agent spacemacs
       "repo" string => "/home/olepor/.emacs.d/";
 
   methods:
+
+      # Only run once a day!
+      Monday . Tuesday . Wednesday . Thursday . Friday::
+
       "git_fetch_all"
 
         usebundle => git("$(repo)", "fetch", "--all");
