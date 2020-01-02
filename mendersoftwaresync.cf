@@ -4,10 +4,7 @@ body common control {
 
 body file control
 {
-        inputs => { "$(sys.libdir)/common.cf", # if_elapsed
-                    "$(sys.libdir)/files.cf",
-                    "$(sys.libdir)/packages.cf",
-                    "$(sys.libdir)/commands.cf", # in_dir(dir)
+        inputs => { "$(sys.libdir)/stdlib.cf",
                     "/home/olepor/misc/learn/cfe/spacemacs.cf", # Keep spacemacs up to date
         };
 }
