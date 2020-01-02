@@ -1,5 +1,5 @@
 body common control {
-        bundlesequence => { "mendersoftware" };
+        bundlesequence => { "mendersoftware", "spacemacs" };
 }
 
 body file control
@@ -7,6 +7,7 @@ body file control
         inputs => { "$(sys.libdir)/files.cf",
                     "$(sys.libdir)/packages.cf",
                     "$(sys.libdir)/commands.cf", # in_dir(dir)
+                    "/home/olepor/misc/learn/cfe/spacemacs.cf", # Keep spacemacs up to date
         };
 }
 

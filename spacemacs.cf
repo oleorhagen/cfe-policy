@@ -1,0 +1,30 @@
+
+body file control
+{
+        inputs => { "$(sys.libdir)/files.cf",
+                    "$(sys.libdir)/commands.cf", # in_dir(dir)
+                    "$(sys.libdir)/vcs.cf", # git(repo_path, subcmd, args)
+        };
+}
+
+
+bundle agent spacemacs
+#
+# Keep the spacemacs config in sync with upstream master
+#
+{
+
+  vars:
+      "location" string => "/home/olepor/.emacs.d/";
+      "repo" string => "/home/olepor/.emacs.d/";
+
+  methods:
+      "git_fetch_all"
+
+        usebundle => git("$(repo)", "fetch", "--all");
+
+      "git_checkout_origin_develop"
+
+        usebundle => git("$(repo)", "checkout", "origin/develop");
+
+}
