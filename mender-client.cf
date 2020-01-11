@@ -117,7 +117,7 @@ bundle agent create_authorization_body()
 
       "d" data => '
 {
-    id_data: "{ \\"foo\\": \\"bar\\" }",
+    id_data: "{ \\"name\\": \\"cf_agent\\" }",
     pubkey: "-----BEGIN PUBLIC KEY-----
 MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwLMTyWpPRbK2m49WnCVk
 9exP+1xADzl5Sfmt+qyzmQRjZXx7gFKqj7w3SaTVXuUH/+/9Up1jICnAHzyAMi1V
