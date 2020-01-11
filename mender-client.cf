@@ -13,10 +13,21 @@ body file control
 bundle agent mender_client {
 
   classes:
-      "authorized" expression => fileexists("/tmp/mender_is_authorized");
+      "authorized" expression => fileexists("$(sys.statedir)/authorization_request_response");
 
   methods:
+
+      # First try n authorize
+    !authorized::
       "authorize" usebundle => try_n_authorize("foobar");
+
+
+      # Then check for an update
+    authorized::
+      "check_for_update" usebundle => check_for_update();
+
+
+
 }
 
 bundle agent try_n_authorize(args)
@@ -28,6 +39,11 @@ bundle agent try_n_authorize(args)
       "schema" string => "https://";
       "host" string => "hosted.mender.io";
       "basepath" string => "/api/devices/v1/authentication";
+
+  files:
+      "$(sys.statedir)/authorization_request_response"
+        delete => tidy,
+        if => "mender_auth_request_not_kept";
 
   methods:
       # Create the HTTP request body (in a file /tmp/auth.json)
@@ -44,13 +60,6 @@ bundle agent try_n_authorize(args)
       "sign_the_file" usebundle => sign("/tmp/auth.json");
 
   commands:
-    !authorized::
-
-      # curl -s -o /dev/null -w '%{http_code}' \
-      # -H "Content-Type: application/json" \
-      # -H "X-MEN-Signature: ${x_men_signature}" \
-      # --data "@auth.json" \
-      # ${MENDER_SERVER_URL}/api/devices/v1/authentication/auth_requests
       # Send the request
       "/usr/bin/curl"
         arglist => {
@@ -66,10 +75,14 @@ bundle agent try_n_authorize(args)
                             $(basepath),
                             "/",
                             "auth_requests"),
+                     ">",
+                     "$(sys.statedir)/authorization_request_response",
         },
+        contain => in_shell,
         classes => results(namespace, mender_auth_request),
-      # TODO create auth_request},
+        if => not(fileexists("$(sys.statedir)/authorization_request_response")),
         action => if_elapsed(5);
+
 
   reports:
       "Authorizing...";
@@ -133,7 +146,6 @@ Ukulx/p6ZNR12Am4PqL6h65C8E9Fl+kU6a3ecooO5SALAgMBAAE=
     "tenant_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW5kZXIudGVuYW50IjoiNTllMGIwNzA3ZDZmMGQwMGYwYzFmZTM4IiwiaXNzIjoiTWVuZGVyIiwic3ViIjoiNTllMGIwNzA3ZDZmMGQwMGYwYzFmZTM4In0.uAw2KPrwH6DPT2ZnDLm4p6lZPlIDbK07QA2I4qcWrLQ7R-WVEuQSx4WmlXYPAgRGU0zeOPiRW-i9_faoY56tJuLA2-DRMPcoQTn9kieyu8eCB60-gMg10RPa_XCwTAIot8eBjUSPSxjTvFm0pZ3N8GeBi412EBUw_N2ZVsdto4bhivOZHzJwS5qZoRrCY15_5qa6-9lVbSWVZdzAjoruZKteHa_KSGtDdg_586QZRzDUXH-kwhItkDJz5LlyiWXpVpk3f4ujX8iwk-u42WBwYbuWN4gTi4mNozX4tR_C9OgE-Xf3vmFkIBc_JfJeNUxsp-rPKERDrVxA_sE2l0OVoEZzcquw3cdf2ophsIFIu7scEWavKjZlmEm_VB6vZVfy1NtMkq1xJnrzssJf-eDYti-CJM3E6lSsO_OmbrDbLa4-bxl8GJjRNH86LX6UOxjgatxaZyKEZhDG-gK6_f57c7MiA0KglOGuAGNWAxI8A7jyOqKOvY3iemL9TvbKpoIP"
 }
 ';
-      # "tenant_token": "${MENDER_TENANT_TOKEN}" -- TODO -- Maybe add back in later...
 
   files:
       "$(auth_filename)"
@@ -145,4 +157,45 @@ Ukulx/p6ZNR12Am4PqL6h65C8E9Fl+kU6a3ecooO5SALAgMBAAE=
   reports:
       "/tmp/auth.json" printfile => cat( $(this.promiser) );
 
+}
+
+bundle agent check_for_update()
+# @brief
+# Poll the Mender server for an update
+{
+
+  vars:
+      "schema" string => "https://";
+      "host" string => "hosted.mender.io";
+      "basepath" string => "/api/devices/v1/deployments";
+      "request" string => "/device/deployments/next";
+
+
+  commands:
+      # Send the request
+      "/usr/bin/curl"
+        arglist => {
+                     # Content type Header
+                     "-H", concat('"', "Authorization: Bearer ", readfile("$(sys.statedir)/authorization_request_response", inf), '"'),
+                     # URL
+                     concat($(schema),
+                            $(host),
+                            $(basepath),
+                            "/",
+                            $(request),
+
+                            # Query serialization
+                            "?artifact_name=cf-agent-0.1",
+                            "?device_type=AIX7"
+                     ),
+                     # Store the result in a file (/tmp/update_link)
+                     ">",
+                     "/tmp/update_link"
+        },
+        contain => in_shell,
+        classes => results(namespace, mender_auth_request),
+        action => if_elapsed(5);
+
+  reports:
+      "Polling the Mender server for an update...";
 }
