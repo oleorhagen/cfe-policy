@@ -1,0 +1,148 @@
+body common control {
+        bundlesequence => { "mender_client" };
+}
+
+body file control
+{
+        inputs => {
+                    "$(sys.libdir)/stdlib.cf",
+        };
+}
+
+
+bundle agent mender_client {
+
+  classes:
+      "authorized" expression => fileexists("/tmp/mender_is_authorized");
+
+  methods:
+      "authorize" usebundle => try_n_authorize("foobar");
+}
+
+bundle agent try_n_authorize(args)
+# @brief
+# Authorize State
+{
+
+  vars:
+      "schema" string => "https://";
+      "host" string => "hosted.mender.io";
+      "basepath" string => "/api/devices/v1/authentication";
+
+  methods:
+      # Create the HTTP request body (in a file /tmp/auth.json)
+      # using the bundle
+      # |
+      # v
+      "create_authorization_body";
+
+      #
+      # Sign the HTTP request body (from the file)
+      #
+      # Sign the authorization request, and write the signature to the file (/tmp/auth_signature)
+      #
+      "sign_the_file" usebundle => sign("/tmp/auth.json");
+
+  commands:
+    !authorized::
+
+      # curl -s -o /dev/null -w '%{http_code}' \
+      # -H "Content-Type: application/json" \
+      # -H "X-MEN-Signature: ${x_men_signature}" \
+      # --data "@auth.json" \
+      # ${MENDER_SERVER_URL}/api/devices/v1/authentication/auth_requests
+      # Send the request
+      "/usr/bin/curl"
+        arglist => {
+                     # Content type Header
+                     "-H", concat('"', "Content-Type: application/json", '"'),
+                     # Signature Header
+                     "-H", concat('"', "X-MEN-Signature:", readfile("/tmp/auth_signature", inf), '"'),
+                     # Request body
+                     "--data", "@/tmp/auth.json",
+                     # URL
+                     concat($(schema),
+                            $(host),
+                            $(basepath),
+                            "/",
+                            "auth_requests"),
+        },
+        classes => results(namespace, mender_auth_request),
+      # TODO create auth_request},
+        action => if_elapsed(5);
+
+  reports:
+      "Authorizing...";
+
+    mender_auth_request_repaired::
+      "The CFEngine Mender-client successfully authorized with hosted Mender \o/";
+
+    mender_auth_request_not_kept::
+      "The CFEngine Mender-client failed to authorize with the hosted Mender Server";
+}
+
+bundle agent sign(request_file)
+#
+# @brief Sign the authorization request
+# https://docs.mender.io/2.2/apis/open-source/device-apis/device-authentication
+#
+{
+
+  commands:
+      "/bin/cat /tmp/auth.json | tr -d '\n' | tr -d '\r' | /usr/bin/openssl dgst -sha256 -sign /home/olepor/misc/learn/cfe/keys/private.key | openssl base64 -A > /tmp/auth_signature"
+        contain => in_shell,
+        classes => results(namespace, mender_digest_signature);
+      
+  reports:
+
+      "Signing the authorization request...";
+
+    mender_digest_signature_repaired::
+      "Signing successful";
+
+    mender_digest_signature_not_kept::
+      "Failed to sign the authorization request";
+}
+
+bundle agent create_authorization_body()
+#
+# @brief
+# Creates a file with the HTTP-request body
+#
+{
+
+  vars:
+      "auth_filename" string => "/tmp/auth.json";
+
+
+      "d" data => '
+{
+    id_data: "{ \\"foo\\": \\"bar\\" }",
+    pubkey: "-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAwLMTyWpPRbK2m49WnCVk
+9exP+1xADzl5Sfmt+qyzmQRjZXx7gFKqj7w3SaTVXuUH/+/9Up1jICnAHzyAMi1V
+zow1XRsFRsj+TTURWHQkan9PYQWp9hQuJMZ7knLgtktJWaUDCRMqO5qYHInkID9y
+4MEZSXeSj1J0mlIvUqpQja27txbV/EoEM8T5UABhZsQT6upirw7vs2jN4oNYCW/x
+4gLhwhgdIZxbF1feg4m32PfJ2vuYcx6M9Fe/ToqPN27y42aiR3G8w4sSpo4wvGnI
+B08gOnB/dfIG38fyCiWLURNNAQYfN4O4DLtDemCgmnrsdfJSYwC79OP1x4/e5YH9
+LGYc6V1y1bHC2COvmE5uN5GPcVY12n7dg5fqFn/XOYmiF+dBmhspW0ElEcWOEqUL
+35I0NkhT7gFVWPe06UbHMd6OlhXBxZUcZdqUdXnwrNBUvssVPIOyjyIhzzlfynRQ
+Ukulx/p6ZNR12Am4PqL6h65C8E9Fl+kU6a3ecooO5SALAgMBAAE=
+-----END PUBLIC KEY-----
+",
+    "tenant_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW5kZXIudGVuYW50IjoiNTllMGIwNzA3ZDZmMGQwMGYwYzFmZTM4IiwiaXNzIjoiTWVuZGVyIiwic3ViIjoiNTllMGIwNzA3ZDZmMGQwMGYwYzFmZTM4In0.uAw2KPrwH6DPT2ZnDLm4p6lZPlIDbK07QA2I4qcWrLQ7R-WVEuQSx4WmlXYPAgRGU0zeOPiRW-i9_faoY56tJuLA2-DRMPcoQTn9kieyu8eCB60-gMg10RPa_XCwTAIot8eBjUSPSxjTvFm0pZ3N8GeBi412EBUw_N2ZVsdto4bhivOZHzJwS5qZoRrCY15_5qa6-9lVbSWVZdzAjoruZKteHa_KSGtDdg_586QZRzDUXH-kwhItkDJz5LlyiWXpVpk3f4ujX8iwk-u42WBwYbuWN4gTi4mNozX4tR_C9OgE-Xf3vmFkIBc_JfJeNUxsp-rPKERDrVxA_sE2l0OVoEZzcquw3cdf2ophsIFIu7scEWavKjZlmEm_VB6vZVfy1NtMkq1xJnrzssJf-eDYti-CJM3E6lSsO_OmbrDbLa4-bxl8GJjRNH86LX6UOxjgatxaZyKEZhDG-gK6_f57c7MiA0KglOGuAGNWAxI8A7jyOqKOvY3iemL9TvbKpoIP"
+}
+';
+      # "tenant_token": "${MENDER_TENANT_TOKEN}" -- TODO -- Maybe add back in later...
+
+  files:
+      "$(auth_filename)"
+        create => "true",
+        edit_template_string => "{{%-top-}}",
+        template_method => "inline_mustache",
+        template_data =>  @(d);
+
+  reports:
+      "/tmp/auth.json" printfile => cat( $(this.promiser) );
+
+}
