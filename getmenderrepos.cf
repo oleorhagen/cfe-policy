@@ -1,0 +1,91 @@
+
+body common control {
+        bundlesequence => { "getmenderrepos" };
+}
+
+body file control
+{
+        inputs => {
+                    "$(sys.libdir)/stdlib.cf",
+        };
+}
+
+bundle agent getmenderrepos {
+
+  vars:
+      "options_str" string => '
+{
+  "url.max_content": 1832960,
+  "url.verbose": 0,
+  "url.user-agent": "cf-agent",
+  "url.headers": [ "Authorization: token 88970c3ab8200ba5c09249648bb913c546e337c0" ]
+}';
+      "options" data => parsejson( $(options_str) );
+      "url" string => "https://api.github.com/orgs/mendersoftware/repos";
+      "response" data => url_get( $(url), options );
+      "out" string => format("%S", response);
+
+      "json_response" data => parsejson( "$(response[content])" );
+
+      # Get the indices for the returned object list
+      "jri" slist => getindices( "json_response" );
+
+      # "repo_name" string => "$(json_response[$(jri)][name])";
+
+      # "json_object" data => "$(response[content])";
+
+      # TODO - Find out how to collect the string values into an slist
+      # "menderrepos_names" slist => getvalues( "json_response[name]" );
+
+  reports:
+      # "$(this.bundle): from $(url) with options $(options_str) we got $(out)";
+      # "$(this.bundle): response ($(response)) body we got $(response[content])";
+      # "$(this.bundle): json-parsed: $(json_response)";
+      # "$(this.bundle): JSON-object: $(json_object)";
+      # "$(this.bundle): jri: $(jri)";
+      # "$(this.bundle): repo_name: $(repo_name)";
+      "$(this.bundle): repository names: $(json_response[$(jri)][name])";
+
+      # "$(this.bundle): repos: $(menderrepos_names)";
+}
+
+bundle agent foo
+{
+  vars:
+      "foo" string => "bar";
+}
+
+# bundle agent main
+# {
+#   vars:
+#     # The response from github api is /HUGE/. Probably you will need to increase
+#     # the max_content size allowed for the response (it's 4k by default). I got
+#     # an error from the github api unless I set a user agent.
+
+#       "options" data => '{ "url.max_content": 10240000, "url.headers": [ "User-Agent: cf-agent" ]  }';
+#       "url" string => "https://api.github.com/orgs/mendersoftware/repos";
+#       "r" data => url_get( $(url), options);
+
+#       # Strangely I can not seem to pull the index from the response content. I
+#       # expect to get integers of their positions (0, 1, 2 ...)
+#       # TODO File CFE BUG, apparently not possible to pull index from the content key in url_get() response 
+#       "rci" slist => getindices( "r[content]" );
+#       # Seems like it should be possible based on this mock data
+#       "mock" data => '{ "content": [ { "name": "foo" }, { "name": "bar" } ] }';
+#       "mci" slist => getindices( "mock[content]" );
+
+#       # So, I will take the response, and render the content to a file and read that back in
+#        "d" data => readjson( "/tmp/response.content", inf );
+#        "di" slist => getindices( "d" );
+#   files:
+#    # CFE-?
+#    # Work around strange issue where unable to get index from the content key of a url_get response
+#    "/tmp/response.content" create => "true", template_method => "inline_mustache", template_data => @(r), edit_template_string => "{{%content}}";
+
+#   reports:
+#      "Response Content Index: $(rci)";
+#      "Mock Content Index: $(mci)";
+#      "File Content Index: $(di)";
+#      "Repo Names";
+#      "$(d[$(di)][name])";
+# }
