@@ -28,20 +28,20 @@ bundle agent mendersoftware {
   vars:
       # All the repositories to control
       "repos" slist => {
-                        # Client repositores
-                        "mender",
-                        "mender-artifact",
-                        "meta-mender",
-                        "mendertesting",
-                        "mender-qa",
-                        "mender-binary-delta",
+                         # Client repositores
+                         "mender",
+                         "mender-artifact",
+                         "meta-mender",
+                         "mendertesting",
+                         "mender-qa",
+                         "mender-binary-delta",
 
-                        # Backend repositories
-                        "deployments",
-                        "deployments-enterprise",
-                        "deviceadm",
-                        "deviceauth",
-                        "mender-backend-cli",
+                         # Backend repositories
+                         "deployments",
+                         "deployments-enterprise",
+                         "deviceadm",
+                         "deviceauth",
+                         "mender-backend-cli",
 
                          # Misc (testing etc)
                          "mendertesting",
@@ -95,7 +95,13 @@ bundle agent mendersoftware {
 bundle agent git_fetch_all(where)
 {
 
+  classes:
+      "repo_exists" expression => fileexists( "$(where)/.git" );
+
+
   commands:
+
+    repo_exists::
       "/usr/bin/git"
         args => "fetch --all",
         contain => in_dir("$(where)");
@@ -104,6 +110,22 @@ bundle agent git_fetch_all(where)
       "Fetching all in $(where)";
 
 }
+
+bundle agent git_clone(where, repo_name)
+{
+
+  classes:
+      "repo_exists" expression => fileexists( "$(where)/$(repo_name)/.git" );
+
+  commands:
+
+    !repo_exists::
+      "/usr/bin/git"
+        args => "clone git@github.com/mendersoftware/$(repo_name)", # TODO -- Add the .git extension
+        contain => in_dir( "$(where)" );
+
+}
+
 
 bundle edit_line git_config_section_replace(sectionName, newSectionString)
 {

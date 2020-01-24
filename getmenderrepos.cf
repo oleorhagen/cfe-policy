@@ -14,9 +14,6 @@ body file control
 # TODO -- How to get the private repositories
 bundle agent main {
 
-  classes:
-      "repo_already_exists" expression => fileexists( "$(location)$(repos_intersection)/.git" );
-
   vars:
       # TODO -- Use these variables for the getmenderrepos bundle function call?
       "users" slist =>
@@ -43,23 +40,13 @@ bundle agent main {
       "oleorhagen_repos" usebundle => getmenderrepos("oleorhagen",
                                                      "https://api.github.com/users/oleorhagen/repos");
 
-      # Only fetch the remotes every fifteen minutes
-      # and if the repository exists locally
-    repo_already_exists::
-      "/usr/bin/git fetch --all" # Update all remotes
+      "fetch all remote updates"
         usebundle => git_fetch_all("$(location)$(repos_intersection)"),
         classes => if_notkept("$(repos)_failed"),
-        action => if_elapsed("15");
+        action => if_elapsed("60");
 
-      # TODO -- Manage the git-config with the new stdlib
-
-  commands:
-      # If it does not exist - clone it <- TODO
-      !repo_already_exists::
-        "/usr/bin/git"
-        args => "clone git@github.com:mendersoftware/$(repos_intersection).git",
-        contain => in_dir( "$(location)" );
-
+      "clone a repo locally, if it does not already exist"
+        usebundle => git_clone( "$(location)", "$(repos_intersection)" );
 
 
   reports:
