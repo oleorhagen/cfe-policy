@@ -1,6 +1,6 @@
 
 body common control {
-        bundlesequence => { "getmenderrepos" };
+        bundlesequence => { "main" };
 }
 
 body file control
@@ -10,7 +10,41 @@ body file control
         };
 }
 
-bundle agent getmenderrepos {
+bundle agent main {
+
+  vars:
+      # TODO -- Use these variables for the getmenderrepos bundle function call?
+      "users" slist =>
+      {
+        "mendersoftware",
+        "oleorhagen"
+      };
+      "user_urls" slist =>
+      {
+        "https://api.github.com/orgs/mendersoftware/repos",
+        "https://api.github.com/users/oleorhagen/repos"
+      };
+
+      "repos_intersection" slist => intersection( "getmenderrepos.mendersoftware_mender_repos", "getmenderrepos.oleorhagen_mender_repos" );
+
+  methods:
+
+      "menderrepos" usebundle => getmenderrepos("mendersoftware",
+                                                "https://api.github.com/orgs/mendersoftware/repos");
+
+      "oleorhagen_repos" usebundle => getmenderrepos("oleorhagen",
+                                                     "https://api.github.com/users/oleorhagen/repos");
+      
+
+  reports:
+      "$(this.bundle): Ran main...";
+      "$(this.bundle): menderepos: $(getmenderrepos.mendersoftware_json_response[$(getmenderrepos.jri)][name])";
+
+      "$(this.bundle): intersection: $(repos_intersection)";
+
+}
+
+bundle agent getmenderrepos(name, url) {
 
   vars:
       "options_str" string => '
@@ -21,21 +55,20 @@ bundle agent getmenderrepos {
   "url.headers": [ "Authorization: token 88970c3ab8200ba5c09249648bb913c546e337c0" ]
 }';
       "options" data => parsejson( $(options_str) );
-      "url" string => "https://api.github.com/orgs/mendersoftware/repos";
+      # "url" string => "https://api.github.com/orgs/mendersoftware/repos";
       "response" data => url_get( $(url), options );
       "out" string => format("%S", response);
 
-      "json_response" data => parsejson( "$(response[content])" );
+      "$(name)_json_response" data => parsejson( "$(response[content])" );
 
       # Get the indices for the returned object list
-      "jri" slist => getindices( "json_response" );
+      "jri" slist => getindices( "$(name)_json_response" );
 
-      # "repo_name" string => "$(json_response[$(jri)][name])";
+      "repo_name" string => "$($(name)_json_response[$(jri)][name])";
 
-      # "json_object" data => "$(response[content])";
+      "mender_array[$($(name)_json_response[$(jri)][name])]" string => "$($(name)_json_response[$(jri)][name])";
 
-      # TODO - Find out how to collect the string values into an slist
-      # "menderrepos_names" slist => getvalues( "json_response[name]" );
+      "$(name)_mender_repos" slist => getvalues( mender_array );
 
   reports:
       # "$(this.bundle): from $(url) with options $(options_str) we got $(out)";
@@ -43,8 +76,9 @@ bundle agent getmenderrepos {
       # "$(this.bundle): json-parsed: $(json_response)";
       # "$(this.bundle): JSON-object: $(json_object)";
       # "$(this.bundle): jri: $(jri)";
-      # "$(this.bundle): repo_name: $(repo_name)";
-      "$(this.bundle): repository names: $(json_response[$(jri)][name])";
+      "$(this.bundle): repo_name: $(repo_name)";
+      "$(this.bundle): repository names for $(name): $($(name)_json_response[$(jri)][name])";
+      "$(this.bundle): mender_list: $(mender_repos)";
 
       # "$(this.bundle): repos: $(menderrepos_names)";
 }
