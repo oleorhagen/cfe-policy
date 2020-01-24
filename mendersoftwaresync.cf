@@ -1,13 +1,13 @@
-body common control {
-        bundlesequence => { "mendersoftware", "spacemacs" };
-}
+# body common control {
+#         bundlesequence => { "mendersoftware", "spacemacs" };
+# }
 
-body file control
-{
-        inputs => { "$(sys.libdir)/stdlib.cf",
-                    "/home/olepor/misc/learn/cfe/spacemacs.cf", # Keep spacemacs up to date
-        };
-}
+# body file control
+# {
+#         inputs => { "$(sys.libdir)/stdlib.cf",
+#                     "/home/olepor/misc/learn/cfe/spacemacs.cf", # Keep spacemacs up to date
+#         };
+# }
 
 # Clone all repositories from the mendersoftware organization at
 # github.com/mendersoftware

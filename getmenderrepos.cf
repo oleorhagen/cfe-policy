@@ -7,10 +7,15 @@ body file control
 {
         inputs => {
                     "$(sys.libdir)/stdlib.cf",
+                    "/home/olepor/misc/learn/cfe/mendersoftwaresync.cf", # git fetch, and config management
         };
 }
 
+# TODO -- How to get the private repositories
 bundle agent main {
+
+  classes:
+      "repo_already_exists" expression => fileexists( "$(location)$(repos_intersection)/.git" );
 
   vars:
       # TODO -- Use these variables for the getmenderrepos bundle function call?
@@ -25,6 +30,9 @@ bundle agent main {
         "https://api.github.com/users/oleorhagen/repos"
       };
 
+      # Path to mendersoftware repository
+      "location" string => "/home/olepor/mendersoftware/";
+
       "repos_intersection" slist => intersection( "getmenderrepos.mendersoftware_mender_repos", "getmenderrepos.oleorhagen_mender_repos" );
 
   methods:
@@ -34,7 +42,25 @@ bundle agent main {
 
       "oleorhagen_repos" usebundle => getmenderrepos("oleorhagen",
                                                      "https://api.github.com/users/oleorhagen/repos");
-      
+
+      # Only fetch the remotes every fifteen minutes
+      # and if the repository exists locally
+    repo_already_exists::
+      "/usr/bin/git fetch --all" # Update all remotes
+        usebundle => git_fetch_all("$(location)$(repos_intersection)"),
+        classes => if_notkept("$(repos)_failed"),
+        action => if_elapsed("15");
+
+      # TODO -- Manage the git-config with the new stdlib
+
+  commands:
+      # If it does not exist - clone it <- TODO
+      !repo_already_exists::
+        "/usr/bin/git"
+        args => "clone git@github.com:mendersoftware/$(repos_intersection).git",
+        contain => in_dir( "$(location)" );
+
+
 
   reports:
       "$(this.bundle): Ran main...";
