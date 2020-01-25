@@ -115,14 +115,31 @@ bundle agent git_clone(where, repo_name)
 {
 
   classes:
-      "repo_exists" expression => fileexists( "$(where)/$(repo_name)/.git" );
+
+      "repo_exists" expression =>  fileexists( "$(where)/$(repo_name)/.git" );
+
+      "var_exists" expression => isvariable( "$(repo_name)" );
 
   commands:
 
-    !repo_exists::
+    !repo_exists & var_exists::
       "/usr/bin/git"
         args => "clone git@github.com/mendersoftware/$(repo_name)", # TODO -- Add the .git extension
         contain => in_dir( "$(where)" );
+
+  reports:
+
+    repo_exists::
+      "$(this.bundle): The repository $(where)$(repo_name) already exists...";
+
+    !repo_exists::
+      "$(this.bundle): The repository $(where)$(repo_name) does not exist...";
+
+    var_exists::
+      "$(this.bundle): The variable repo_name: $(repo_name) is defined";
+
+    !var_exists::
+      "$(this.bundle): The variable repo_name is not defined: $(repo_name)";
 
 }
 

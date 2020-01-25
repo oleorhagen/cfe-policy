@@ -27,6 +27,15 @@ bundle agent main {
         "https://api.github.com/users/oleorhagen/repos"
       };
 
+      "mendersoftware_section_template[mendersoftware][$(getmenderrepos.mendersoftware_mender_repos)]" string => "\
+    $(const.t)url = git@github.com:mendersoftware/$(getmenderrepos.mendersoftware_mender_repos).git
+    $(const.t)fetch = +refs/heads/*:refs/remotes/mendersoftware/*
+    $(const.t)push=noPushUpstream";
+
+      "mendersoftware_section_template[oleorhagen][$(getmenderrepos.oleorhagen_mender_repos)]" string => "\
+    $(const.t)url = git@github.com:oleorhagen/$(getmenderrepos.oleorhagen_mender_repos).git
+    $(const.t)fetch = +refs/heads/*:refs/remotes/oleorhagen/*";
+
       # Path to mendersoftware repository
       "location" string => "/home/olepor/mendersoftware/";
 
@@ -40,18 +49,34 @@ bundle agent main {
       "oleorhagen_repos" usebundle => getmenderrepos("oleorhagen",
                                                      "https://api.github.com/users/oleorhagen/repos");
 
+      "clone a repo locally, if it does not already exist"
+        usebundle => git_clone( "$(location)", "$(repos_intersection)" );
+
       "fetch all remote updates"
         usebundle => git_fetch_all("$(location)$(repos_intersection)"),
         classes => if_notkept("$(repos)_failed"),
         action => if_elapsed("60");
 
-      "clone a repo locally, if it does not already exist"
-        usebundle => git_clone( "$(location)", "$(repos_intersection)" );
+  files:
+
+      # add mendersoftware remote mendersoftware repos
+
+      "$(location)$(getmenderrepos.mendersoftware_mender_repos)/.git/config"
+        edit_line => git_config_section_replace("mendersoftware", "$(mendersoftware_section_template[mendersoftware][$(getmenderrepos.mendersoftware_mender_repos)])");
+
+
+      # add oleorhagen remote to user repos
+
+      "$(location)$(repos_intersection)/.git/config"
+        edit_line => git_config_section_replace("oleorhagen", "$(mendersoftware_section_template[oleorhagen][$(repos_intersection)])");
+
 
 
   reports:
       "$(this.bundle): Ran main...";
       "$(this.bundle): menderepos: $(getmenderrepos.mendersoftware_json_response[$(getmenderrepos.jri)][name])";
+
+      "$(this.bundle): menderrepos_list: $(getmenderrepos.mendersoftware_mender_repos)";
 
       "$(this.bundle): intersection: $(repos_intersection)";
 
@@ -60,12 +85,15 @@ bundle agent main {
 bundle agent getmenderrepos(name, url) {
 
   vars:
+
+      "github_outh_access_token" string => readfile("/home/olepor/.secrets/github_access_token", 50);
+
       "options_str" string => '
 {
   "url.max_content": 1832960,
   "url.verbose": 0,
   "url.user-agent": "cf-agent",
-  "url.headers": [ "Authorization: token 88970c3ab8200ba5c09249648bb913c546e337c0" ]
+  "url.headers": [ "Authorization: token $(github_outh_access_token)" ]
 }';
       "options" data => parsejson( $(options_str) );
       # "url" string => "https://api.github.com/orgs/mendersoftware/repos";
@@ -89,6 +117,7 @@ bundle agent getmenderrepos(name, url) {
       # "$(this.bundle): json-parsed: $(json_response)";
       # "$(this.bundle): JSON-object: $(json_object)";
       # "$(this.bundle): jri: $(jri)";
+      "$(this.bundle): github_access_token: $(github_oath_access_token)";
       "$(this.bundle): repo_name: $(repo_name)";
       "$(this.bundle): repository names for $(name): $($(name)_json_response[$(jri)][name])";
       "$(this.bundle): mender_list: $(mender_repos)";
