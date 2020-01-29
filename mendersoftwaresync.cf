@@ -118,13 +118,13 @@ bundle agent git_clone(where, repo_name)
 
       "repo_exists" expression =>  fileexists( "$(where)/$(repo_name)/.git" );
 
-      "var_exists" expression => isvariable( "$(repo_name)" );
+      "var_exists" expression => isvariable( "repo_name" );
 
   commands:
 
-    !repo_exists & var_exists::
+      !repo_exists & var_exists::
       "/usr/bin/git"
-        args => "clone git@github.com/mendersoftware/$(repo_name)", # TODO -- Add the .git extension
+        args => "clone git@github.com:mendersoftware/$(repo_name).git",
         contain => in_dir( "$(where)" );
 
   reports:
@@ -143,10 +143,10 @@ bundle agent git_clone(where, repo_name)
 
 }
 
-
 bundle edit_line git_config_section_replace(sectionName, newSectionString)
 {
       # Replace an ini section in a git-config file
+
   delete_lines:
       ".*"
         select_region => git_config_section_region("$(sectionName)"),
@@ -163,7 +163,7 @@ bundle edit_line git_config_section_replace(sectionName, newSectionString)
         comment => "Insert the section variables";
 
   reports:
-      "sectionName: $(sectionName)";
+      "$(this.bundle): sectionName: $(sectionName)";
       # "newSectionString $(newSectionString)";
 }
 
