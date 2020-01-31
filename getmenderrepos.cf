@@ -19,20 +19,20 @@ bundle agent main {
 
   vars:
 
-      "mendersoftware_section_template[mendersoftware][$(getmenderrepos.mendersoftware_mender_repos)]" string => "\
-    $(const.t)url = git@github.com:mendersoftware/$(getmenderrepos.mendersoftware_mender_repos).git
-    $(const.t)fetch = +refs/heads/*:refs/remotes/mendersoftware/*
-    $(const.t)push=noPushUpstream";
-
-      "mendersoftware_section_template[oleorhagen][$(getmenderrepos.oleorhagen_mender_repos)]" string => "\
-    $(const.t)url = git@github.com:oleorhagen/$(getmenderrepos.oleorhagen_mender_repos).git
-    $(const.t)fetch = +refs/heads/*:refs/remotes/oleorhagen/*";
-
       # Path to mendersoftware repository
       "location" string => "/home/olepor/mendersoftware/";
 
       "repos_intersection" slist => intersection( "getmenderrepos.mendersoftware_mender_repos", "getmenderrepos.oleorhagen_mender_repos" );
-      # "repos_intersection" slist => intersection ( "", "" );
+
+      # mendersoftware git config
+      "git_config[$(repos_intersection)][remote \"mendersoftware\"][url]" string => "git@github.com:mendersoftware/$(repos_intersection).git";
+      # "git_config[$(repos_intersection)][remote \"mendersoftware\"][fetch]" string => "+refs/heads/*:refs/heads/mendersoftware/*";
+      "git_config[$(repos_intersection)][remote \"mendersoftware\"][push]" string => "noPushUpstream";
+
+      # personal git config
+      "git_config[$(repos_intersection)][remote \"oleorhagen\"][url]" string => "git@github.com:oleorhagen/$(repos_intersection).git";
+      # "git_config[$(repos_intersection)][remote \"oleorhagen\"][fetch]" string => "+refs/heads/*:refs/heads/oleorhagen/*";
+
 
   methods:
 
@@ -46,7 +46,6 @@ bundle agent main {
       "clone a repo locally, if it does not already exist"
         usebundle => git_clone( $(location), "$(repos_intersection)" );
 
-    # foobar::
       "fetch all remote updates"
         usebundle => git_fetch_all("$(location)$(repos_intersection)"),
         classes => if_notkept("$(repos)_failed"),
@@ -57,16 +56,16 @@ bundle agent main {
       # add mendersoftware remote mendersoftware repos
 
     is_repos::
-      "$(location)$(repos_intersection)/.git/config"
-        edit_line => git_config_section_replace("mendersoftware", "$(mendersoftware_section_template[mendersoftware][$(repos_intersection)])");
 
+      "$(location)$(repos_intersection)/.git/config"
+        edit_line => manage_variable_values_ini("main.git_config[$(repos_intersection)]", "remote \"mendersoftware\"");
 
       # add oleorhagen remote to user repos
 
     is_repos::
-      "$(location)$(repos_intersection)/.git/config"
-        edit_line => git_config_section_replace("oleorhagen", "$(mendersoftware_section_template[oleorhagen][$(repos_intersection)])");
 
+      "$(location)$(repos_intersection)/.git/config"
+        edit_line => manage_variable_values_ini("main.git_config[$(repos_intersection)]", "remote \"oleorhagen\"");
 
 
   reports:
@@ -83,6 +82,7 @@ bundle agent main {
 
 
 }
+
 
 bundle agent getmenderrepos(name, url) {
 
