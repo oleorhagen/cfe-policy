@@ -26,12 +26,12 @@ bundle agent main {
 
       # mendersoftware git config
       "git_config[$(repos_intersection)][remote \"mendersoftware\"][url]" string => "git@github.com:mendersoftware/$(repos_intersection).git";
-      # "git_config[$(repos_intersection)][remote \"mendersoftware\"][fetch]" string => "+refs/heads/*:refs/heads/mendersoftware/*";
+      "git_config[$(repos_intersection)][remote \"mendersoftware\"][fetch]" string => "+refs/heads/*:refs/remotes/mendersoftware/*";
       "git_config[$(repos_intersection)][remote \"mendersoftware\"][push]" string => "noPushUpstream";
 
       # personal git config
       "git_config[$(repos_intersection)][remote \"oleorhagen\"][url]" string => "git@github.com:oleorhagen/$(repos_intersection).git";
-      # "git_config[$(repos_intersection)][remote \"oleorhagen\"][fetch]" string => "+refs/heads/*:refs/heads/oleorhagen/*";
+      "git_config[$(repos_intersection)][remote \"oleorhagen\"][fetch]" string => "+refs/heads/*:refs/remotes/oleorhagen/*";
 
 
   methods:
